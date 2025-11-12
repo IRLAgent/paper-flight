@@ -119,12 +119,24 @@ export default class GameScene extends Phaser.Scene {
         this.score = 0;
         this.obstacleTimer = 0;
         this.obstacleDelay = 2000; // Spawn every 2 seconds (in ms)
+        this.highScore = parseInt(localStorage.getItem('paperFlightHighScore')) || 0;
 
         // Score text
         this.scoreText = this.add.text(16, 16, 'Distance: 0m', {
             fontSize: '20px',
             fill: '#fff'
-        });
+        }).setDepth(100);
+        
+        // Current and high score text at bottom
+        this.currentScoreText = this.add.text(16, 560, 'Current: 0m', {
+            fontSize: '18px',
+            fill: '#fff'
+        }).setDepth(100);
+        
+        this.highScoreText = this.add.text(16, 584, `Best: ${this.highScore}m`, {
+            fontSize: '18px',
+            fill: '#FFD700'
+        }).setDepth(100);
 
         // Input handling
         this.input.on('pointerdown', () => this.startGame());
@@ -260,7 +272,14 @@ export default class GameScene extends Phaser.Scene {
 
         // Update score (distance traveled)
         this.score += delta / 100;
-        this.scoreText.setText(`Distance: ${Math.floor(this.score)}m`);
+        const currentScore = Math.floor(this.score);
+        this.scoreText.setText(`Distance: ${currentScore}m`);
+        this.currentScoreText.setText(`Current: ${currentScore}m`);
+        
+        // Update high score display if current score exceeds it
+        if (currentScore > this.highScore) {
+            this.highScoreText.setText(`Best: ${currentScore}m`);
+        }
 
         // Scroll background windows (parallax - slow for depth)
         this.windowsLayer.x -= 0.5;
@@ -532,6 +551,14 @@ export default class GameScene extends Phaser.Scene {
         if (!this.isGameStarted) return; // Prevent multiple calls
         this.isGameStarted = false;
         
+        // Update high score if needed
+        const finalScore = Math.floor(this.score);
+        if (finalScore > this.highScore) {
+            this.highScore = finalScore;
+            localStorage.setItem('paperFlightHighScore', this.highScore);
+            this.highScoreText.setText(`Best: ${this.highScore}m`);
+        }
+        
         // Game over text
         this.add.text(400, 250, 'Game Over!', {
             fontSize: '48px',
@@ -539,7 +566,7 @@ export default class GameScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(100);
 
-        this.add.text(400, 320, `Final Distance: ${Math.floor(this.score)}m`, {
+        this.add.text(400, 320, `Final Distance: ${finalScore}m`, {
             fontSize: '24px',
             fill: '#fff'
         }).setOrigin(0.5).setDepth(100);
