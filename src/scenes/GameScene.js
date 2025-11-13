@@ -6,13 +6,31 @@ export default class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        // We'll load assets here later
-        // For now, we'll use simple shapes
+        // Load audio files
+        this.load.audio('bgMusic', 'assets/audio/background/background.mp3');
+        this.load.audio('gameOverSound', 'assets/audio/background/game-over.mp3');
     }
 
     create() {
+        // Stop all sounds from previous game
+        this.sound.stopAll();
+        
         // Create office background layers (parallax effect)
         this.createBackground();
+        
+        // Start background music with fade in
+        this.bgMusic = this.sound.add('bgMusic', { 
+            loop: true, 
+            volume: 0 
+        });
+        this.bgMusic.play();
+        
+        // Fade in background music
+        this.tweens.add({
+            targets: this.bgMusic,
+            volume: 0.3,
+            duration: 400
+        });
 
         // Add title text
         this.titleText = this.add.text(400, 100, 'Paper Flight', {
@@ -107,8 +125,8 @@ export default class GameScene extends Phaser.Scene {
         
         this.physics.add.existing(this.airplane);
         this.airplane.body.setCollideWorldBounds(true);
-        this.airplane.body.setSize(40, 14);
-        this.airplane.body.setOffset(-18, -7);
+        this.airplane.body.setSize(30, 10);
+        this.airplane.body.setOffset(-13, -5);
         this.airplane.setDepth(50);
 
         // Create obstacle group
@@ -550,6 +568,21 @@ export default class GameScene extends Phaser.Scene {
     gameOver() {
         if (!this.isGameStarted) return; // Prevent multiple calls
         this.isGameStarted = false;
+        
+        // Fade out background music
+        if (this.bgMusic) {
+            this.tweens.add({
+                targets: this.bgMusic,
+                volume: 0,
+                duration: 200,
+                onComplete: () => {
+                    this.bgMusic.stop();
+                }
+            });
+        }
+        
+        // Play game over sound
+        this.sound.play('gameOverSound', { volume: 0.5 });
         
         // Update high score if needed
         const finalScore = Math.floor(this.score);
