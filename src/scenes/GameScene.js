@@ -125,8 +125,8 @@ export default class GameScene extends Phaser.Scene {
         
         this.physics.add.existing(this.airplane);
         this.airplane.body.setCollideWorldBounds(true);
-        this.airplane.body.setSize(30, 10);
-        this.airplane.body.setOffset(-13, -5);
+        this.airplane.body.setSize(24, 6);
+        this.airplane.body.setOffset(-10, -3);
         this.airplane.setDepth(50);
 
         // Create obstacle group
