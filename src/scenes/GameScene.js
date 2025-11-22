@@ -138,6 +138,8 @@ export default class GameScene extends Phaser.Scene {
         this.obstacleTimer = 0;
         this.obstacleDelay = 2000; // Spawn every 2 seconds (in ms)
         this.highScore = parseInt(localStorage.getItem('paperFlightHighScore')) || 0;
+        this.currentAngle = 0; // For smooth angle transitions
+        this.lastMilestone = 0; // Track last milestone shown (100, 200, 300, etc.)
 
         // Score text
         this.scoreText = this.add.text(16, 16, 'Distance: 0m', {
@@ -279,14 +281,16 @@ export default class GameScene extends Phaser.Scene {
     update(time, delta) {
         if (!this.isGameStarted) return;
 
-        // Flap up when holding
+        // Flap up when holding - gentler upward movement
         if (this.isHolding) {
-            this.airplane.body.setVelocityY(-200); // Reduced from -300 - gentler rise
+            this.airplane.body.setVelocityY(-150); // Reduced from -200 for gentler rise
         }
 
-        // Tilt airplane based on velocity
-        const angle = Phaser.Math.Clamp(this.airplane.body.velocity.y / 500, -0.5, 0.5);
-        this.airplane.rotation = angle;
+        // Tilt airplane based on velocity - smoothed for gradual response
+        const targetAngle = Phaser.Math.Clamp(this.airplane.body.velocity.y / 800, -0.4, 0.4);
+        // Lerp current angle towards target for smooth transitions
+        this.currentAngle = Phaser.Math.Linear(this.currentAngle, targetAngle, 0.1);
+        this.airplane.rotation = this.currentAngle;
 
         // Update score (distance traveled)
         this.score += delta / 100;
@@ -297,6 +301,13 @@ export default class GameScene extends Phaser.Scene {
         // Update high score display if current score exceeds it
         if (currentScore > this.highScore) {
             this.highScoreText.setText(`Best: ${currentScore}m`);
+        }
+        
+        // Show milestone animation every time score increases by 100
+        const currentMilestone = Math.floor(currentScore / 100) * 100;
+        if (currentMilestone > this.lastMilestone && currentMilestone >= 100) {
+            this.lastMilestone = currentMilestone;
+            this.showMilestoneAnimation(currentMilestone);
         }
 
         // Scroll background windows (parallax - slow for depth)
@@ -359,9 +370,17 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnObstacle() {
-        // Random gap position and size
+        // Dynamic gap size: starts larger, decreases with score
+        const currentScore = Math.floor(this.score);
+        // Start with gap of 220, decrease to minimum of 140 as score increases
+        // Gap decreases by 1 pixel for every 2 meters traveled
+        const baseGapSize = 220;
+        const minGapSize = 140;
+        const gapReduction = Math.min(80, currentScore / 2);
+        const gapSize = Math.max(minGapSize, baseGapSize - gapReduction);
+        
+        // Random gap position
         const gapCenter = Phaser.Math.Between(180, 420); // Center of gap (vertical position)
-        const gapSize = Phaser.Math.Between(140, 180); // Size of the gap
         
         // CEILING OBSTACLE (pendant light hanging down)
         const ceilingHeight = gapCenter - gapSize / 2; // How far it hangs down
@@ -563,6 +582,77 @@ export default class GameScene extends Phaser.Scene {
         container.setDepth(40);
         
         return container;
+    }
+
+    showMilestoneAnimation(milestone) {
+        // Create milestone text with particles/effects
+        const milestoneText = this.add.text(400, 300, `${milestone}m!`, {
+            fontSize: '72px',
+            fill: '#FFD700',
+            fontStyle: 'bold',
+            stroke: '#FF6B00',
+            strokeThickness: 4
+        }).setOrigin(0.5).setDepth(200).setAlpha(0);
+        
+        // Bonus text below
+        const bonusText = this.add.text(400, 360, 'MILESTONE!', {
+            fontSize: '32px',
+            fill: '#FFFFFF',
+            fontStyle: 'bold',
+            stroke: '#FFD700',
+            strokeThickness: 2
+        }).setOrigin(0.5).setDepth(200).setAlpha(0);
+        
+        // Animate the milestone text
+        this.tweens.add({
+            targets: milestoneText,
+            alpha: 1,
+            scaleX: 1.2,
+            scaleY: 1.2,
+            duration: 200,
+            ease: 'Back.easeOut',
+            yoyo: false
+        });
+        
+        this.tweens.add({
+            targets: bonusText,
+            alpha: 1,
+            duration: 200,
+            delay: 100,
+            ease: 'Power2'
+        });
+        
+        // Fade out and destroy after showing
+        this.time.delayedCall(1500, () => {
+            this.tweens.add({
+                targets: [milestoneText, bonusText],
+                alpha: 0,
+                y: '-=50',
+                duration: 500,
+                ease: 'Power2',
+                onComplete: () => {
+                    milestoneText.destroy();
+                    bonusText.destroy();
+                }
+            });
+        });
+        
+        // Create particle burst effect
+        const particleCount = 20;
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (Math.PI * 2 * i) / particleCount;
+            const particle = this.add.circle(400, 300, 4, 0xFFD700).setDepth(199);
+            
+            this.tweens.add({
+                targets: particle,
+                x: 400 + Math.cos(angle) * 150,
+                y: 300 + Math.sin(angle) * 150,
+                alpha: 0,
+                duration: 800,
+                ease: 'Power2',
+                onComplete: () => particle.destroy()
+            });
+        }
     }
 
     gameOver() {
