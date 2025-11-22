@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Paper Flight</title>
     <style>
         * {
@@ -14,6 +14,9 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
         body {
             display: flex;
@@ -28,6 +31,8 @@
             height: 100%;
             max-width: 100vw;
             max-height: 100vh;
+            /* For mobile browsers that have dynamic viewport height */
+            max-height: -webkit-fill-available;
             display: flex;
             justify-content: center;
             align-items: center;
