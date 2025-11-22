@@ -15,6 +15,10 @@ export default class GameScene extends Phaser.Scene {
         // Stop all sounds from previous game
         this.sound.stopAll();
         
+        // Constants for gameplay tuning
+        this.ANGLE_LERP_FACTOR = 0.1; // Smoothness of airplane tilt transitions
+        this.MILESTONE_INTERVAL = 100; // Show animation every 100 meters
+        
         // Create office background layers (parallax effect)
         this.createBackground();
         
@@ -289,7 +293,7 @@ export default class GameScene extends Phaser.Scene {
         // Tilt airplane based on velocity - smoothed for gradual response
         const targetAngle = Phaser.Math.Clamp(this.airplane.body.velocity.y / 800, -0.4, 0.4);
         // Lerp current angle towards target for smooth transitions
-        this.currentAngle = Phaser.Math.Linear(this.currentAngle, targetAngle, 0.1);
+        this.currentAngle = Phaser.Math.Linear(this.currentAngle, targetAngle, this.ANGLE_LERP_FACTOR);
         this.airplane.rotation = this.currentAngle;
 
         // Update score (distance traveled)
@@ -304,8 +308,8 @@ export default class GameScene extends Phaser.Scene {
         }
         
         // Show milestone animation every time score increases by 100
-        const currentMilestone = Math.floor(currentScore / 100) * 100;
-        if (currentMilestone > this.lastMilestone && currentMilestone >= 100) {
+        const currentMilestone = Math.floor(currentScore / this.MILESTONE_INTERVAL) * this.MILESTONE_INTERVAL;
+        if (currentMilestone > this.lastMilestone && currentMilestone >= this.MILESTONE_INTERVAL) {
             this.lastMilestone = currentMilestone;
             this.showMilestoneAnimation(currentMilestone);
         }
@@ -373,7 +377,7 @@ export default class GameScene extends Phaser.Scene {
         // Dynamic gap size: starts larger, decreases with score
         const currentScore = Math.floor(this.score);
         // Start with gap of 220, decrease to minimum of 140 as score increases
-        // Gap decreases by 1 pixel for every 2 meters traveled
+        // Gap decreases by 1 pixel for every 2 score units (score units = meters traveled)
         const baseGapSize = 220;
         const minGapSize = 140;
         const gapReduction = Math.min(80, currentScore / 2);
@@ -585,8 +589,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     showMilestoneAnimation(milestone) {
+        // Game center coordinates
+        const centerX = this.game.config.width / 2;
+        const centerY = this.game.config.height / 2;
+        
         // Create milestone text with particles/effects
-        const milestoneText = this.add.text(400, 300, `${milestone}m!`, {
+        const milestoneText = this.add.text(centerX, centerY, `${milestone}m!`, {
             fontSize: '72px',
             fill: '#FFD700',
             fontStyle: 'bold',
@@ -595,7 +603,7 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(200).setAlpha(0);
         
         // Bonus text below
-        const bonusText = this.add.text(400, 360, 'MILESTONE!', {
+        const bonusText = this.add.text(centerX, centerY + 60, 'MILESTONE!', {
             fontSize: '32px',
             fill: '#FFFFFF',
             fontStyle: 'bold',
@@ -641,12 +649,12 @@ export default class GameScene extends Phaser.Scene {
         const particleCount = 20;
         for (let i = 0; i < particleCount; i++) {
             const angle = (Math.PI * 2 * i) / particleCount;
-            const particle = this.add.circle(400, 300, 4, 0xFFD700).setDepth(199);
+            const particle = this.add.circle(centerX, centerY, 4, 0xFFD700).setDepth(199);
             
             this.tweens.add({
                 targets: particle,
-                x: 400 + Math.cos(angle) * 150,
-                y: 300 + Math.sin(angle) * 150,
+                x: centerX + Math.cos(angle) * 150,
+                y: centerY + Math.sin(angle) * 150,
                 alpha: 0,
                 duration: 800,
                 ease: 'Power2',
